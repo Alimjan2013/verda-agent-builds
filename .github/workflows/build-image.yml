@@ -31,7 +31,19 @@ jobs:
         if: ${{ inputs.push == 'true' }}
         run: echo "${{ secrets.VCCR_TOKEN }}" | docker login vccr.io -u "${{ secrets.VCCR_USERNAME }}" --password-stdin
 
-      - name: Build
+      - name: Install Cog
+        if: ${{ hashFiles(format('{0}/cog.yaml', inputs.contextPath)) != '' }}
+        run: |
+          sudo curl -sSL "https://github.com/replicate/cog/releases/latest/download/cog_$(uname -s)_$(uname -m)" -o /usr/local/bin/cog
+          sudo chmod +x /usr/local/bin/cog
+
+      - name: Build (Cog)
+        if: ${{ hashFiles(format('{0}/cog.yaml', inputs.contextPath)) != '' }}
+        working-directory: ${{ inputs.contextPath }}
+        run: cog build -t "${{ inputs.image }}"
+
+      - name: Build (Dockerfile)
+        if: ${{ hashFiles(format('{0}/cog.yaml', inputs.contextPath)) == '' }}
         run: docker build --platform linux/amd64 -t "${{ inputs.image }}" "${{ inputs.contextPath }}"
 
       - name: Push
