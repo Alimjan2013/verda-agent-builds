@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+transformers==4.57.1
+opencv-python-headless==4.11.0.86
+numpy==1.25.0
+Pillow==11.1.0
+peft
+torchvision
+decord==0.6.0
+lmdb==1.7.5
+accelerate
+sentencepiece
+huggingface-hub
