@@ -1,0 +1,14 @@
+fastapi==0.115.8
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
+requests==2.32.3
+transformers==4.57.1
+huggingface_hub==0.28.1
+numpy==1.25.0
+Pillow==11.1.0
+peft==0.14.0
+torchvision==0.20.1
+decord==0.6.0
+lmdb==1.7.5
+opencv-python-headless==4.11.0.86
+safetensors==0.5.2
