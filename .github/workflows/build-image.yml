@@ -1,0 +1,39 @@
+name: build-image
+run-name: "build ${{ inputs.buildId }} → ${{ inputs.image }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildId:
+        required: true
+        type: string
+      contextPath:
+        required: true
+        type: string
+      image:
+        description: Full image ref incl. registry and tag
+        required: true
+        type: string
+      push:
+        description: '"true" to push to the registry'
+        required: true
+        type: string
+
+jobs:
+  build:
+    # Swap to a Blacksmith runner (e.g. blacksmith-4vcpu-ubuntu-2404) after
+    # installing the Blacksmith GitHub App for faster builds + layer cache.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to vccr.io
+        if: ${{ inputs.push == 'true' }}
+        run: echo "${{ secrets.VCCR_TOKEN }}" | docker login vccr.io -u "${{ secrets.VCCR_USERNAME }}" --password-stdin
+
+      - name: Build
+        run: docker build --platform linux/amd64 -t "${{ inputs.image }}" "${{ inputs.contextPath }}"
+
+      - name: Push
+        if: ${{ inputs.push == 'true' }}
+        run: docker push "${{ inputs.image }}"
