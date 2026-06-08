@@ -1,0 +1,14 @@
+build:
+  gpu: true
+  python_version: "3.12"
+  python_packages:
+    - cog
+    - opencv-python-headless
+    - transformers
+    - numpy
+    - Pillow
+    - peft
+    - torchvision
+    - decord
+    - lmdb
+predict: "predict.py:Predictor"
