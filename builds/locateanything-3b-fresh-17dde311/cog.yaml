@@ -1,0 +1,19 @@
+build:
+  gpu: true
+  python_version: "3.12"
+  python_packages:
+    - "torch>=2.6.0"
+    - "torchvision"
+    - "transformers==4.57.1"
+    - "accelerate"
+    - "peft"
+    - "Pillow>=11.0.0"
+    - "opencv-python-headless==4.11.0.86"
+    - "numpy>=1.25.0"
+    - "decord==0.6.0"
+    - "lmdb==1.7.5"
+    - "sentencepiece"
+    - "protobuf"
+    - "cog"
+
+predict: "predict.py:Predictor"
