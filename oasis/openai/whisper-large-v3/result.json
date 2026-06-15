@@ -1,0 +1,37 @@
+{
+  "modelId": "openai/whisper-large-v3",
+  "result": {
+    "mode": "bootstrap",
+    "notes": "Whisper large-v3 is an ASR model (WhisperForConditionalGeneration); audio INPUT models need media decoders (librosa, soundfile, ffmpeg) not bundled in the stock vLLM image. Bootstrap installs them at cold start before launching the vLLM server. Expect ~60s cold-start penalty.",
+    "deployment": {
+      "image": "vllm/vllm-openai:v0.19.1",
+      "exposedPort": 8000,
+      "healthcheck": {
+        "port": 8000,
+        "path": "/health"
+      },
+      "entrypoint": [
+        "bash"
+      ],
+      "cmd": [
+        "-c",
+        "pip install -q librosa soundfile && apt-get install -q -y ffmpeg 2>/dev/null; python3 -m vllm.entrypoints.openai.api_server --model openai/whisper-large-v3 --dtype auto"
+      ],
+      "env": [],
+      "requiresHfToken": false,
+      "compute": {
+        "minVramGb": 10,
+        "cpuOnly": false,
+        "recommendMinReplicas": 0
+      }
+    },
+    "test": {
+      "path": "/v1/audio/transcriptions",
+      "method": "POST",
+      "bodyTemplate": null,
+      "audioMultipartField": "file"
+    }
+  },
+  "jobId": "oj_kwuleNJ-hw",
+  "cachedAt": "2026-06-15T08:53:57.785Z"
+}
