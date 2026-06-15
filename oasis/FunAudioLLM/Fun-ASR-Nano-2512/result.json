@@ -1,0 +1,45 @@
+{
+  "modelId": "FunAudioLLM/Fun-ASR-Nano-2512",
+  "result": {
+    "mode": "build",
+    "notes": "Fun-ASR-Nano-2512 is a funasr-library ASR model (library_name: funasr) with no vLLM/SGLang serving support; inference uses funasr.AutoModel which requires a custom FastAPI server wrapping the funasr inference pipeline. Cold-start includes model download to /data on first run.",
+    "deployment": {
+      "image": "vccr.io/29f01280-f49e-4a18-84eb-7fac881d51aa/fun-asr-nano-2512:1.0",
+      "exposedPort": 8000,
+      "healthcheck": {
+        "port": 8000,
+        "path": "/health"
+      },
+      "env": [],
+      "requiresHfToken": false,
+      "compute": {
+        "minVramGb": 8,
+        "cpuOnly": false,
+        "recommendMinReplicas": 0
+      }
+    },
+    "test": {
+      "path": "/v1/audio/transcriptions",
+      "method": "POST",
+      "bodyTemplate": null,
+      "audioMultipartField": "file"
+    },
+    "build": {
+      "imageRef": "vccr.io/29f01280-f49e-4a18-84eb-7fac881d51aa/fun-asr-nano-2512:1.0",
+      "smokePassed": false,
+      "attempts": 0,
+      "files": [
+        {
+          "path": "Dockerfile",
+          "content": "FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04\n\nENV DEBIAN_FRONTEND=noninteractive\nENV HF_HOME=/data\nWORKDIR /app\n\nRUN apt-get update && apt-get install -y \\\n    python3 python3-pip git ffmpeg libsndfile1 \\\n    && rm -rf /var/lib/apt/lists/*\n\nRUN pip3 install --no-cache-dir \\\n    torch torchaudio --index-url https://download.pytorch.org/whl/cu121 && \\\n    pip3 install --no-cache-dir \\\n    funasr \\\n    fastapi \\\n    uvicorn[standard] \\\n    python-multipart \\\n    soundfile \\\n    librosa\n\nCOPY server.py /app/server.py\n\nEXPOSE 8000\n\nCMD [\"python3\", \"/app/server.py\"]\n"
+        },
+        {
+          "path": "server.py",
+          "content": "import os\nimport tempfile\nimport uvicorn\nfrom contextlib import asynccontextmanager\nfrom fastapi import FastAPI, File, UploadFile, Form, HTTPException\nfrom fastapi.responses import JSONResponse\nfrom funasr import AutoModel\n\nMODEL_ID = \"FunAudioLLM/Fun-ASR-Nano-2512\"\n\n_model = None\n\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI):\n    global _model\n    device = \"cuda:0\" if os.path.exists(\"/dev/nvidia0\") else \"cpu\"\n    _model = AutoModel(\n        model=MODEL_ID,\n        hub=\"hf\",\n        trust_remote_code=True,\n        vad_model=\"funasr/fsmn-vad\",\n        vad_kwargs={\"max_single_segment_time\": 30000},\n        device=device,\n    )\n    yield\n\n\napp = FastAPI(title=\"Fun-ASR-Nano-2512 Server\", lifespan=lifespan)\n\n\n@app.get(\"/health\")\nasync def health():\n    return {\"status\": \"ok\"}\n\n\n@app.post(\"/v1/audio/transcriptions\")\nasync def transcribe(\n    file: UploadFile = File(...),\n    language: str = Form(default=\"auto\"),\n    response_format: str = Form(default=\"json\"),\n):\n    if _model is None:\n        raise HTTPException(status_code=503, detail=\"Model not loaded\")\n\n    suffix = \".\" + (file.filename.rsplit(\".\", 1)[-1] if file.filename and \".\" in file.filename else \"wav\")\n    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:\n        tmp.write(await file.read())\n        tmp_path = tmp.name\n\n    try:\n        lang_map = {\n            \"zh\": \"中文\", \"en\": \"英文\", \"ja\": \"日文\",\n            \"ko\": \"韩文\", \"auto\": \"中文\",\n        }\n        lang = lang_map.get(language, \"中文\")\n        res = _model.generate(\n            input=[tmp_path],\n            cache={},\n            batch_size=1,\n            language=lang,\n            itn=True,\n        )\n        text = res[0][\"text\"] if res else \"\"\n    except Exception as exc:\n        raise HTTPException(status_code=500, detail=str(exc))\n    finally:\n        os.unlink(tmp_path)\n\n    if response_format == \"text\":\n        return text\n    return JSONResponse({\"text\": text})\n\n\nif __name__ == \"__main__\":\n    uvicorn.run(app, host=\"0.0.0.0\", port=8000)\n"
+        }
+      ]
+    }
+  },
+  "jobId": "oj_4OSXCqlE94",
+  "cachedAt": "2026-06-15T08:55:26.734Z"
+}
